@@ -82,27 +82,39 @@ merged_data['total_votes_rank'] = merged_data['total_votes'].rank(ascending=Fals
 merged_data['average_quality_rank'] = merged_data['average_quality_score'].rank(ascending=False)
 
 # Compute hegemony
-merged_data['weak_hegemony'] = merged_data['gdp_rank'] - merged_data['total_votes_rank']
 merged_data['strong_hegemony'] = merged_data['gdp_rank'] - merged_data['average_quality_rank']
-
-# Bubble plot for GDP vs Total Votes
-
+merged_data['weak_hegemony'] = merged_data['gdp_rank'] - merged_data['total_votes_rank']
 data = merged_data.sort_values(by=['Year'], ascending=True)
-# Creating the animated scatter plot
-fig2 = px.scatter(data, 
-                 x='GDP', 
-                 y='total_votes', 
-                 animation_frame='Year', 
-                 size='average_quality_score', 
-                 color='gdp_rank', 
-                 hover_name='Country_Code', 
-                 log_x=True, 
-                 size_max=40, 
-                 range_x=[data['GDP'].min(), data['GDP'].max()], 
-                 range_y=[data['total_votes'].min(), data['total_votes'].max()],
-                 title='GDP vs Total Votes Over Year',
-                 labels={'Year': 'Year'})
 
+# Filter out rows with negative values in the strong_hegemony column
+filtered_data = data[data['strong_hegemony'] >= 0]
+
+# Extract the top 10 countries by GDP for each year
+top_10_gdp_countries = (data.groupby('Year', as_index=False, group_keys=False)
+                        .apply(lambda x: x.nlargest(10, 'GDP')))
+
+# Manually filter top 10 countries by total votes for each year
+top_10_votes_countries_list = []
+for year in data['Year'].unique():
+    top_10_votes_countries_year = data[data['Year'] == year].nlargest(11, 'total_votes')
+    top_10_votes_countries_list.append(top_10_votes_countries_year)
+top_10_votes_countries = pd.concat(top_10_votes_countries_list)
+
+
+# Filter top 5 countries with most hegemony
+top_10_strong_hegemony_country = []
+
+
+for year in merged_data['Year'].unique():
+    # Compute hegemony
+    merged_data['strong_hegemony'] = merged_data['gdp_rank'] - merged_data['average_quality_rank']
+    merged_data['weak_hegemony'] = merged_data['gdp_rank'] - merged_data['total_votes_rank']
+    top_10_hegemony_countries_year = merged_data[merged_data['Year'] == year].nlargest(5, 'strong_hegemony')
+    top_10_strong_hegemony_country.append(top_10_hegemony_countries_year)
+
+top_10_hegemony_countries = pd.concat(top_10_strong_hegemony_country)
+
+# Function to handle annimation speed
 def speed_animate(fig, animation_speed=1000):
     """
     Adjust the animation speed of a Plotly figure.
@@ -128,31 +140,45 @@ def speed_animate(fig, animation_speed=1000):
         }]
     )
     return fig
+
+# Bubble plot for GDP vs Total Votes with only top 10 countries
+fig1 = px.scatter(top_10_gdp_countries, 
+                 x='GDP', 
+                 y='total_votes', 
+                 animation_frame='Year', 
+                 size='Population', 
+                 color='gdp_rank', 
+                 hover_name='Country_Code', 
+                 log_x=True, 
+                 size_max=80, 
+                 range_x=[top_10_gdp_countries['GDP'].min(), top_10_gdp_countries['GDP'].max()], 
+                 range_y=[top_10_gdp_countries['total_votes'].min(), top_10_gdp_countries['total_votes'].max()],
+                 title='GDP vs Total Votes Over Year (Top 10 Countries)',
+                 labels={'Year': 'Year'})
     
-# fig2 = speed_animate(fig2, animation_speed=500)
-#fig2.show()
+# fig1 = speed_animate(fig1, animation_speed=500)
+#fig1.show()
+#fig1.write_html('analysis/plots/flim_hegemony/gdp_vs_votes.html')
 
-# fig2.write_html('analysis/plots/flim_hegemony/gdp_vs_votes.html')
-
-# Bubble plot for GDP vs Average Quality Score
-fig3 = px.scatter(data, 
-                  x='GDP', 
+# Bubble plot for total votes vs average quality score with only top 10 countries
+fig2 = px.scatter(top_10_votes_countries, 
+                  x='total_votes', 
                   y='average_quality_score', 
                   animation_frame='Year', 
                   size='Population', 
-                  color='gdp_rank', 
-                  hover_name='Country_Code', 
-                  title='GDP vs Average Quality Score',
-                  labels={'GDP': 'GDP', 'average_quality_score': 'Average Quality Score', 'Year': 'Year'},
+                  color='Country_Code', 
+                  hover_name='Country_Name', 
+                  title='Total Votes vs Average Quality Score (Top 10 Countries)',
+                  labels={'total_votes': 'Total Votes', 'average_quality_score': 'Average Quality Score', 'Year': 'Year'},
                   size_max=150, 
                   log_x=True, 
-                  range_x=[data['GDP'].min(), data['GDP'].max()], 
-                  range_y=[data['average_quality_score'].min(), data['average_quality_score'].max()])
+                  range_x=[top_10_votes_countries['total_votes'].min(), top_10_votes_countries['total_votes'].max()], 
+                  range_y=[top_10_votes_countries['average_quality_score'].min(), top_10_votes_countries['average_quality_score'].max()])
 
 # Display the plot
-fig3 = speed_animate(fig3, animation_speed=1000)
-# fig3.show()
-# fig3.write_html('analysis/plots/flim_hegemony/gdp_vs_avg_quality_score.html')
+# fig2 = speed_animate(fig2, animation_speed=1000)
+# fig2.show()
+# fig2.write_html('analysis/plots/flim_hegemony/gdp_vs_avg_quality_score.html')
 
 
 fig = px.scatter_matrix(merged_data,
@@ -164,13 +190,28 @@ fig = px.scatter_matrix(merged_data,
 
 
 # Parallel coordinates plot
-fig4 = px.parallel_coordinates(merged_data, dimensions=['population_rank', 'gdp_rank', 'gdp_per_capita_rank', 'total_votes_rank', 'average_quality_rank'],
+fig4 = px.parallel_coordinates(top_10_gdp_countries, dimensions=['population_rank', 'gdp_rank', 'gdp_per_capita_rank', 'total_votes_rank', 'average_quality_rank'],
                                color='gdp_rank', title='Parallel Coordinates Plot of Ranks')
 #fig4.show()
 
-# Scatter plot for Weak Hegemony vs Strong Hegemony
-fig5 = px.scatter(merged_data, x='weak_hegemony', y='strong_hegemony', size='Population', color='gdp_rank', 
-                  hover_name='Country_Code', title='Weak Hegemony vs Strong Hegemony',
-                  labels={'weak_hegemony': 'Weak Hegemony', 'strong_hegemony': 'Strong Hegemony'},
-                  size_max=45)
+# top 10 hegenom countries plot
+fig5 = px.line(top_10_hegemony_countries, x='Year', y='strong_hegemony', color='Country_Code',
+               title='Strong Hegemony Over Year',
+               labels={'Year': 'Year', 'strong_hegemony': 'Hegemony'})
+
+fig5.update_traces(mode='lines+markers')
 #fig5.show()
+#fig5.write_html('analysis/plots/flim_hegemony/strong_hegenomy_countries.html')
+
+
+# Weak hegonomy vs strong hegenomy country over year
+fig6 = px.scatter(filtered_data, x='weak_hegemony', y='strong_hegemony', size='strong_hegemony', color='Country_Code',
+                  hover_name='Country_Code', animation_frame='Year',
+                  title='Weak Hegemony vs Strong Hegemony',
+                  labels={'weak_hegemony': 'Weak Hegemony', 'strong_hegemony': 'Strong Hegemony', 'gdp_rank': 'GDP Rank'},
+                  size_max=80)
+
+fig6.update_layout(showlegend=False)  # Hides the legend for better animation clarity
+#fig6.show()
+#fig6.write_html('analysis/plots/flim_hegemony/hegenomy_weak_vs_strong.html')
+
