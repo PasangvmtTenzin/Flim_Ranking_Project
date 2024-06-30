@@ -90,7 +90,7 @@ def plot_distribution_of_average_ratings(data):
     plt.ylabel('Frequency')
     ax.yaxis.set_major_formatter(FuncFormatter(thousands_formatter))
     ax.format_coord = lambda x, y: f'x={x:.2f}, y={y:.0f}'
-    plt.savefig('analysis/plots/movie/distribution_of_average_ratings.png', dpi=300)
+    plt.savefig('analysis/plots/movie_quality/distribution_of_average_ratings.png', dpi=300)
     plt.show()
 
 def plot_number_of_votes_per_year(data):
@@ -100,7 +100,7 @@ def plot_number_of_votes_per_year(data):
     plt.xlabel('Year')
     plt.ylabel('Number of Votes')
     ax.yaxis.set_major_formatter(FuncFormatter(thousands_formatter))
-    plt.savefig('analysis/plots/movie/number_of_votes_per_year.png', dpi=300)
+    plt.savefig('analysis/plots/movie_quality/number_of_votes_per_year.png', dpi=300)
     plt.show()
 
 def plot_average_rating_per_genre(data):
@@ -131,7 +131,7 @@ def plot_average_rating_per_genre(data):
         ax.text(i, median + 0.05, f'{median:.2f}', ha='center', fontsize=10, color='black')
     
     plt.tight_layout()  # Adjust layout to prevent clipping of tick-labels
-    plt.savefig('analysis/plots/movie/average_rating_per_genre.png', dpi=300)
+    plt.savefig('analysis/plots/movie_quality/average_rating_per_genre.png', dpi=300)
     plt.show()
 
 
@@ -161,7 +161,7 @@ def plot_correlation_between_votes_and_ratings(data):
     plt.tight_layout()
 
     # Save and show the plot
-    plt.savefig('analysis/plots/movie/correlation_between_votes_and_ratings.png', dpi=300)
+    plt.savefig('analysis/plots/movie_quality/correlation_between_votes_and_ratings.png', dpi=300)
     plt.show()
 
 def correlation_matrix(data):
@@ -182,7 +182,7 @@ def correlation_matrix(data):
     plt.tight_layout()
 
     # Save and show the plot
-    plt.savefig('analysis/plots/movie/correlation_matrix.png', dpi=300)
+    plt.savefig('analysis/plots/movie_quality/correlation_matrix.png', dpi=300)
     plt.show()
 
 # Calling the functions

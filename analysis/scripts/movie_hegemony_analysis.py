@@ -152,7 +152,7 @@ fig3 = px.scatter(data,
 # Display the plot
 fig3 = speed_animate(fig3, animation_speed=1000)
 # fig3.show()
-fig3.write_html('analysis/plots/flim_hegemony/gdp_vs_avg_quality_score.html')
+# fig3.write_html('analysis/plots/flim_hegemony/gdp_vs_avg_quality_score.html')
 
 
 fig = px.scatter_matrix(merged_data,
