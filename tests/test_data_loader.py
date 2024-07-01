@@ -1,42 +1,34 @@
+# tests/test_data_loader.py
+
 import pytest
 import pandas as pd
-from data_loader import load_data, load_csv_data, clean_data, filter_by_year_range, combine_data
+from src.data_loader import load_csv
 
-@pytest.fixture
-def sample_ratings_data():
-    data = {
-        'tconst': ['tt0000001', 'tt0000002', 'tt0000003'],
-        'averageRating': [5.6, 6.2, 7.1],
-        'numVotes': [1500, 300, 2000]
-    }
-    return pd.DataFrame(data)
+def test_load_csv_valid(mock_pandas_read_csv):
+    # Setup mock to return a valid DataFrame
+    mock_pandas_read_csv.return_value = pd.DataFrame({'col1': [1, 2], 'col2': [3, 4]})
+    
+    df = load_csv('some_path.csv')
+    assert isinstance(df, pd.DataFrame)
+    assert df.shape == (2, 2)
 
-@pytest.fixture
-def sample_basics_data():
-    data = {
-        'tconst': ['tt0000001', 'tt0000002', 'tt0000003'],
-        'primaryTitle': ['Movie1 USA', 'Movie2 ITA', 'Movie3 USA'],
-        'titleType': ['movie', 'movie', 'movie'],
-        'startYear': [2020, 2019, 2018],
-        'genres': ['Drama', 'Comedy', 'Action']
-    }
-    return pd.DataFrame(data)
+def test_load_csv_non_existent(mock_pandas_read_csv):
+    # Setup mock to raise FileNotFoundError
+    mock_pandas_read_csv.side_effect = FileNotFoundError
+    
+    with pytest.raises(FileNotFoundError):
+        load_csv('non_existent_file.csv')
 
-@pytest.fixture
-def sample_gdp_data():
-    data = {
-        'country': ['USA', 'ITA'],
-        'GDP': [21000000, 2000000]
-    }
-    return pd.DataFrame(data)
+def test_load_csv_empty(mock_pandas_read_csv):
+    # Setup mock to raise EmptyDataError
+    mock_pandas_read_csv.side_effect = pd.errors.EmptyDataError
+    
+    with pytest.raises(pd.errors.EmptyDataError):
+        load_csv('empty_file.csv')
 
-@pytest.fixture
-def sample_population_data():
-    data = {
-        'country': ['USA', 'ITA'],
-        'population': [331000000, 60000000]
-    }
-    return pd.DataFrame(data)
-
-def test_load_data(sample_ratings_data):
-    assert not sample_ratings_data.empt
+def test_load_csv_invalid(mock_pandas_read_csv):
+    # Setup mock to raise ParserError
+    mock_pandas_read_csv.side_effect = pd.errors.ParserError
+    
+    with pytest.raises(pd.errors.ParserError):
+        load_csv('invalid_file.csv')

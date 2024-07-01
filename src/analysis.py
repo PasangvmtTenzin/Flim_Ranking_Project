@@ -2,7 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation, PillowWriter
 from matplotlib.ticker import FuncFormatter
-
+import os
 
 def load_data(file_path):
     # Load the provided data
@@ -25,7 +25,10 @@ def analyze_quality_by_country(data, top_n=100):
     return country_quality.sort_values(by=['Year', 'average_quality_score'], ascending=[True, False])
 
 def millions_formatter(x, pos):
-    return f'{x / 1e6:.0f}M'
+    if x >= 1e6:
+        return f'{x / 1e6:.1f}M'
+    else:
+        return f'{x:.0f}'
 
 def plot_and_save_weak_impact(data, file_name):
     fig, ax = plt.subplots(figsize=(12, 8))
@@ -49,7 +52,11 @@ def plot_and_save_weak_impact(data, file_name):
         # Add data labels
         for bar in bars:
             height = bar.get_height()
-            ax.annotate(f'{height / 1e6:.1f}M',   # Format label in millions
+            if height >= 1e6:
+                label = f'{height / 1e6:.1f}M'  # Format label in millions with 1 decimal place
+            else:
+                label = f'{height:.0f}'
+            ax.annotate(label,
                         xy=(bar.get_x() + bar.get_width() / 2, height),
                         xytext=(0, 3),  # 3 points vertical offset
                         textcoords="offset points",
@@ -57,7 +64,12 @@ def plot_and_save_weak_impact(data, file_name):
             
     years = data['Year'].unique()
     ani = FuncAnimation(fig, update, frames=years, repeat=False)
-    ani.save(file_name, writer=PillowWriter(fps=2))
+    
+    # Ensure directory exists before saving
+    save_dir = os.path.join(os.getcwd(), 'plots_src', 'analysis')
+    os.makedirs(save_dir, exist_ok=True)
+    
+    ani.save(os.path.join(save_dir, file_name), writer=PillowWriter(fps=2))
 
 def plot_and_save_strong_impact(data, file_name):
     fig, ax = plt.subplots(figsize=(12, 8))
@@ -83,7 +95,12 @@ def plot_and_save_strong_impact(data, file_name):
 
     years = data['Year'].unique()
     ani = FuncAnimation(fig, update, frames=years, repeat=False)
-    ani.save(file_name, writer=PillowWriter(fps=2))
+    
+    # Ensure directory exists before saving
+    save_dir = os.path.join(os.getcwd(), 'plots_src', 'analysis')
+    os.makedirs(save_dir, exist_ok=True)
+    
+    ani.save(os.path.join(save_dir, file_name), writer=PillowWriter(fps=2))
 
 def plot_and_save_quality_by_country(data, file_name):
     fig, ax = plt.subplots(figsize=(12, 8))
@@ -109,7 +126,12 @@ def plot_and_save_quality_by_country(data, file_name):
 
     years = data['Year'].unique()
     ani = FuncAnimation(fig, update, frames=years, repeat=False)
-    ani.save(file_name, writer=PillowWriter(fps=2))
+    
+    # Ensure directory exists before saving
+    save_dir = os.path.join(os.getcwd(), 'plots_src', 'analysis')
+    os.makedirs(save_dir, exist_ok=True)
+    
+    ani.save(os.path.join(save_dir, file_name), writer=PillowWriter(fps=2))
 
 def perform_analysis(data_file, start_year=None, end_year=None):
     data = load_data(data_file)
@@ -126,9 +148,10 @@ def perform_analysis(data_file, start_year=None, end_year=None):
     quality_by_country = analyze_quality_by_country(data, top_n=100)
     
     # Plot and save the animations
-    plot_and_save_weak_impact(weak_impact, 'plots_src/analysis/weak_impact.gif')
-    plot_and_save_strong_impact(strong_impact, 'plots_src/analysis/strong_impact.gif')
-    plot_and_save_quality_by_country(quality_by_country, 'plots_src/analysis/quality_by_country.gif')
+    plot_and_save_weak_impact(weak_impact, 'weak_impact.gif')
+    plot_and_save_strong_impact(strong_impact, 'strong_impact.gif')
+    plot_and_save_quality_by_country(quality_by_country, 'quality_by_country.gif')
 
-# Function call:
-perform_analysis('merged_data/final_data.csv', start_year=1960, end_year=2020)
+# Function call to perform analysis
+if __name__ == "__main__":
+    perform_analysis('merged_data/final_data.csv', start_year=1960, end_year=2020)
