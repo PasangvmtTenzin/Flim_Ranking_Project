@@ -181,18 +181,28 @@ fig2 = px.scatter(top_10_votes_countries,
 # fig2.write_html('analysis/plots/flim_hegemony/gdp_vs_avg_quality_score.html')
 
 
-fig = px.scatter_matrix(merged_data,
-                        dimensions=['population_rank', 'gdp_rank', 'gdp_per_capita_rank', 'total_votes_rank', 'average_quality_rank'],
-                        color='Country_Code',
-                        title='Scatter Plot Matrix of Ranks',
-                        size_max=50)
-# fig.show()
+fig3 = px.scatter_matrix(
+    top_10_hegemony_countries,
+    dimensions=['population_rank', 'gdp_rank', 'gdp_per_capita_rank', 'total_votes_rank', 'average_quality_rank'],
+    color='Country_Code',
+    title='Scatter Plot Matrix of Ranks',
+    size_max=5
+)
 
+fig3.update_layout(
+    title=dict(x=0.5),
+    width=1700,
+    height=850,
+    margin=dict(l=20, r=20, t=40, b=20),
+    hovermode='closest'
+)
 
-# Parallel coordinates plot
-fig4 = px.parallel_coordinates(top_10_gdp_countries, dimensions=['population_rank', 'gdp_rank', 'gdp_per_capita_rank', 'total_votes_rank', 'average_quality_rank'],
-                               color='gdp_rank', title='Parallel Coordinates Plot of Ranks')
-#fig4.show()
+fig3.update_xaxes(tickangle=45, automargin=True)
+fig3.update_yaxes(automargin=True)
+
+#fig3.show()
+fig3.write_html('analysis/plots/flim_hegemony/Scatter_Plot_Matrix.html')
+
 
 # top 10 hegenom countries plot
 fig5 = px.line(top_10_hegemony_countries, x='Year', y='strong_hegemony', color='Country_Code',
