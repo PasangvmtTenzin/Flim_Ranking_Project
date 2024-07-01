@@ -1,81 +1,134 @@
-# cinematic_impact_lib/analysis.py
 import pandas as pd
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation, PillowWriter
+from matplotlib.ticker import FuncFormatter
 
-def load_and_clean_imdb_data():
-    # Load and clean IMDb data
-    basics = pd.read_csv('data/title.basics.tsv.gz', sep='\t', na_values='\\N', low_memory=False)
-    ratings = pd.read_csv('data/title.ratings.tsv.gz', sep='\t', na_values='\\N', low_memory=False)
-    
-    # Merge basics and ratings
-    data = pd.merge(basics, ratings, on='tconst')
-    
-    # Keep relevant columns
-    data = data[['tconst', 'primaryTitle', 'startYear', 'genres', 'averageRating', 'numVotes']]
-    
-    # Filter out missing values and non-movies
-    data = data.dropna(subset=['startYear', 'genres', 'averageRating', 'numVotes'])
-    data = data[data['titleType'] == 'movie']
-    
+
+def load_data(file_path):
+    # Load the provided data
+    data = pd.read_csv(file_path)
     return data
 
-def load_gdp_data(file_path):
-    # Load and clean GDP data
-    gdp_data = pd.read_csv(file_path)
-    return gdp_data
-
-def load_population_data(file_path):
-    # Load and clean population data
-    population_data = pd.read_csv(file_path)
-    return population_data
-
-def perform_analysis(gdp_file, population_file, start_year=None, end_year=None):
-    imdb_data = load_and_clean_imdb_data()
-    gdp_data = load_gdp_data(gdp_file)
-    population_data = load_population_data(population_file)
-    
-    # Filter IMDb data based on years
-    if start_year and end_year:
-        imdb_data = imdb_data[(imdb_data['startYear'] >= start_year) & (imdb_data['startYear'] <= end_year)]
-    
-    # Implement further analysis...
-    
 def calculate_weak_impact(data):
-    country_votes = data.groupby('originCountry')['numVotes'].sum().reset_index()
-    country_votes = country_votes.rename(columns={'numVotes': 'weakImpact'})
+    country_votes = data.groupby(['Year', 'Country_Name'])['total_votes'].sum().reset_index()
+    country_votes = country_votes.rename(columns={'total_votes': 'weakImpact'})
     return country_votes
 
 def calculate_strong_impact(data):
-    country_ratings = data.groupby('originCountry')['averageRating'].mean().reset_index()
-    country_ratings = country_ratings.rename(columns={'averageRating': 'strongImpact'})
+    country_ratings = data.groupby(['Year', 'Country_Name'])['average_quality_score'].mean().reset_index()
+    country_ratings = country_ratings.rename(columns={'average_quality_score': 'strongImpact'})
     return country_ratings
 
 def analyze_quality_by_country(data, top_n=100):
-    top_movies = data.nlargest(top_n, 'averageRating')
-    country_quality = top_movies.groupby('originCountry')['averageRating'].mean().reset_index()
-    return country_quality.sort_values(by='averageRating', ascending=False)
+    top_movies = data.groupby('Year').apply(lambda x: x.nlargest(top_n, 'average_quality_score')).reset_index(drop=True)
+    country_quality = top_movies.groupby(['Year', 'Country_Name'])['average_quality_score'].mean().reset_index()
+    return country_quality.sort_values(by=['Year', 'average_quality_score'], ascending=[True, False])
 
-def perform_analysis(gdp_file, population_file, start_year=None, end_year=None):
-    imdb_data = load_and_clean_imdb_data()
-    gdp_data = load_gdp_data(gdp_file)
-    population_data = load_population_data(population_file)
+def millions_formatter(x, pos):
+    return f'{x / 1e6:.0f}M'
+
+def plot_and_save_weak_impact(data, file_name):
+    fig, ax = plt.subplots(figsize=(12, 8))
+
+    # Define the formatter
+    formatter = FuncFormatter(millions_formatter)
+
+    def update(year):
+        ax.clear()
+        year_data = data[data['Year'] == year].nlargest(10, 'weakImpact')
+        bars = ax.bar(year_data['Country_Name'], year_data['weakImpact'], color=plt.cm.tab20.colors)
+        ax.set_xlabel('Country')
+        ax.set_ylabel('Total Votes (Weak Impact)')
+        ax.set_title(f"Weak Impact by Country ({year})")
+        ax.set_xticklabels(year_data['Country_Name'], rotation=90)
+        ax.legend(bars, year_data['Country_Name'], loc='upper left')
+        
+        # Apply the formatter to y-axis
+        ax.yaxis.set_major_formatter(formatter)
+        
+        # Add data labels
+        for bar in bars:
+            height = bar.get_height()
+            ax.annotate(f'{height / 1e6:.1f}M',   # Format label in millions
+                        xy=(bar.get_x() + bar.get_width() / 2, height),
+                        xytext=(0, 3),  # 3 points vertical offset
+                        textcoords="offset points",
+                        ha='center', va='bottom')
+            
+    years = data['Year'].unique()
+    ani = FuncAnimation(fig, update, frames=years, repeat=False)
+    ani.save(file_name, writer=PillowWriter(fps=2))
+
+def plot_and_save_strong_impact(data, file_name):
+    fig, ax = plt.subplots(figsize=(12, 8))
+
+    def update(year):
+        ax.clear()
+        year_data = data[data['Year'] == year].nlargest(10, 'strongImpact')
+        bars = ax.bar(year_data['Country_Name'], year_data['strongImpact'], color=plt.cm.tab20.colors)
+        ax.set_xlabel('Country')
+        ax.set_ylabel('Average Rating (Strong Impact)')
+        ax.set_title(f"Strong Impact by Country ({year})")
+        ax.set_xticklabels(year_data['Country_Name'], rotation=90)
+        ax.legend(bars, year_data['Country_Name'], loc='upper left')
+        
+        # Add data labels
+        for bar in bars:
+            height = bar.get_height()
+            ax.annotate(f'{height:.1f}',
+                        xy=(bar.get_x() + bar.get_width() / 2, height),
+                        xytext=(0, 3),  # 3 points vertical offset
+                        textcoords="offset points",
+                        ha='center', va='bottom')
+
+    years = data['Year'].unique()
+    ani = FuncAnimation(fig, update, frames=years, repeat=False)
+    ani.save(file_name, writer=PillowWriter(fps=2))
+
+def plot_and_save_quality_by_country(data, file_name):
+    fig, ax = plt.subplots(figsize=(12, 8))
+
+    def update(year):
+        ax.clear()
+        year_data = data[data['Year'] == year].nlargest(10, 'average_quality_score')
+        bars = ax.bar(year_data['Country_Name'], year_data['average_quality_score'], color=plt.cm.tab20.colors)
+        ax.set_xlabel('Country')
+        ax.set_ylabel('Average Quality Score')
+        ax.set_title(f"Quality of Movies by Country (Top 100 Movies) ({year})")
+        ax.set_xticklabels(year_data['Country_Name'], rotation=90)
+        ax.legend(bars, year_data['Country_Name'], loc='upper left')
+        
+        # Add data labels
+        for bar in bars:
+            height = bar.get_height()
+            ax.annotate(f'{height:.1f}',
+                        xy=(bar.get_x() + bar.get_width() / 2, height),
+                        xytext=(0, 3),  # 3 points vertical offset
+                        textcoords="offset points",
+                        ha='center', va='bottom')
+
+    years = data['Year'].unique()
+    ani = FuncAnimation(fig, update, frames=years, repeat=False)
+    ani.save(file_name, writer=PillowWriter(fps=2))
+
+def perform_analysis(data_file, start_year=None, end_year=None):
+    data = load_data(data_file)
     
-    # Filter IMDb data based on years
+    # Filter data based on years
     if start_year and end_year:
-        imdb_data = imdb_data[(imdb_data['startYear'] >= start_year) & (imdb_data['startYear'] <= end_year)]
+        data = data[(data['Year'] >= start_year) & (data['Year'] <= end_year)]
     
     # Weak and strong impact analysis
-    weak_impact = calculate_weak_impact(imdb_data)
-    strong_impact = calculate_strong_impact(imdb_data)
+    weak_impact = calculate_weak_impact(data)
+    strong_impact = calculate_strong_impact(data)
     
     # Quality of movies by country
-    quality_by_country = analyze_quality_by_country(imdb_data, top_n=100)
+    quality_by_country = analyze_quality_by_country(data, top_n=100)
     
-    # Output results
-    print("Weak Impact by Country:")
-    print(weak_impact.head(10))
-    
-    print("\nStrong Impact by Country:")
-    print(strong_impact.head(10))
-    
-    print("\nQuality of Movies by Country (Top 100):")
-    print(quality_by_country.head(10))
+    # Plot and save the animations
+    plot_and_save_weak_impact(weak_impact, 'plots_src/analysis/weak_impact.gif')
+    plot_and_save_strong_impact(strong_impact, 'plots_src/analysis/strong_impact.gif')
+    plot_and_save_quality_by_country(quality_by_country, 'plots_src/analysis/quality_by_country.gif')
+
+# Function call:
+perform_analysis('merged_data/final_data.csv', start_year=1960, end_year=2020)
