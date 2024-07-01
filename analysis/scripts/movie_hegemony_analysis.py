@@ -71,8 +71,6 @@ cinematic_data_grouped = cinematic_data.groupby('Country_Code').agg(
 # Merge the Data
 merged_data = pd.merge(cinematic_data_grouped, economic_data, on='Country_Code')
 
-# merged_data.to_csv('merged_data/final_data.csv')
-
 # Compute Ranks and Hegemony
 # Calculate the ranks
 merged_data['population_rank'] = merged_data['Population'].rank(ascending=False)
@@ -85,6 +83,8 @@ merged_data['average_quality_rank'] = merged_data['average_quality_score'].rank(
 merged_data['strong_hegemony'] = merged_data['gdp_rank'] - merged_data['average_quality_rank']
 merged_data['weak_hegemony'] = merged_data['gdp_rank'] - merged_data['total_votes_rank']
 data = merged_data.sort_values(by=['Year'], ascending=True)
+
+merged_data.to_csv('merged_data/final_data.csv')
 
 # Filter out rows with negative values in the strong_hegemony column
 filtered_data = data[data['strong_hegemony'] >= 0]
