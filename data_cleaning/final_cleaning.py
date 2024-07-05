@@ -2,7 +2,6 @@ import pandas as pd
 from collections import Counter
 
 
-# Example usage:
 cinematic_data_path = 'merged_data/merged_cinematic_data.csv'
 population_economic_data_path = 'merged_data/population_economic_data.csv'
 
@@ -41,14 +40,14 @@ def load_cinematic_data(cinematic_data_path):
         'averageRating': 'mean',    # Mean of average ratings
         'numVotes': 'sum',          # Sum of votes
         'primaryTitle': mode,       # Mode of primaryTitle
-        'genres': mode,             # Mode of genres
+        'genres': mode,             # mode of genres
         'primaryName': mode         # Mode of primaryName
     }).reset_index()
 
     return cinematic_aggregated
 
-# cinematic = load_cinematic_data(cinematic_data_path)
-# cinematic.to_csv('merged_data/merged_cinematic_data.csv')
+cinematic = load_cinematic_data(cinematic_data_path)
+cinematic.to_csv('merged_data/merged_cinematic_data.csv')
 # print(cinematic.head(5))
 
 def load_population_economic(population_economic_data_path):

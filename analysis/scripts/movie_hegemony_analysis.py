@@ -56,6 +56,10 @@ country_code_mapping = {
     'ZA': 'ZAF', 'ZM': 'ZMB', 'ZW': 'ZWE'
 }
 
+# Define a function to get the first genre
+def extract_first_genre(genres_str):
+    return genres_str.split(',')[0] 
+
 # Apply the mapping to the cinematic data
 cinematic_data['Country_Code'] = cinematic_data['region'].map(country_code_mapping)
 
@@ -65,13 +69,14 @@ cinematic_data = cinematic_data.dropna(subset=['Country_Code'])
 # Re-group by the new country code and aggregate the votes and quality scores
 cinematic_data_grouped = cinematic_data.groupby('Country_Code').agg(
     total_votes=('numVotes', 'sum'),
-    average_quality_score=('averageRating', 'mean')
+    average_quality_score=('averageRating', 'mean'),
+    genres=('genres', lambda x: extract_first_genre(x.iloc[0]))  
 ).reset_index()
+ 
 
 # Merge the Data
 merged_data = pd.merge(cinematic_data_grouped, economic_data, on='Country_Code')
 
-# Compute Ranks and Hegemony
 # Calculate the ranks
 merged_data['population_rank'] = merged_data['Population'].rank(ascending=False)
 merged_data['gdp_rank'] = merged_data['GDP'].rank(ascending=False)
@@ -84,7 +89,7 @@ merged_data['strong_hegemony'] = merged_data['gdp_rank'] - merged_data['average_
 merged_data['weak_hegemony'] = merged_data['gdp_rank'] - merged_data['total_votes_rank']
 data = merged_data.sort_values(by=['Year'], ascending=True)
 
-merged_data.to_csv('merged_data/final_data.csv')
+# merged_data.to_csv('merged_data/final_data.csv')
 
 # Filter out rows with negative values in the strong_hegemony column
 filtered_data = data[data['strong_hegemony'] >= 0]
