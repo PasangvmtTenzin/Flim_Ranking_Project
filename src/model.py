@@ -53,7 +53,7 @@ def train_models(data, features, targets, params):
         X_train = pd.DataFrame(preprocessor.fit_transform(X), columns=features)
         
         # Save the scaler for this target
-        joblib.dump(preprocessor, f"src/{target}_scaler.pkl")
+        joblib.dump(preprocessor, f"src/scaler/{target}_scaler.pkl")
         scalers[target] = preprocessor
         
         # Split data into training and test/validation sets
@@ -104,7 +104,7 @@ def train_models(data, features, targets, params):
             # Evaluate on test/validation data
             y_pred_test = best_model.predict(X_test)
             rmse_test = np.sqrt(mean_squared_error(y_test, y_pred_test))
-            
+
             # Save results for the best model
             target_results[model_name] = {
                 'Model': best_model,
@@ -118,7 +118,7 @@ def train_models(data, features, targets, params):
     return results_train, scalers
 
 # Function to save best models
-def save_best_model(results, model_path='src/'):
+def save_best_model(results, model_path='src/model/'):
     best_models = {}
     for target, target_results in results.items():
         best_model = min(target_results.items(), key=lambda x: x[1]['CV_RMSE_Mean'])  # Use CV_RMSE_Mean for finding best model
@@ -143,7 +143,7 @@ def plot_model_performance(results_train):
     
     fig = px.bar(df, x='Model', y='Value', color='Target', barmode='group', title='Model Performance by Target')
     fig.update_layout(yaxis_type='log')
-    fig.write_html('plots_src/model_performance.html')
+    #fig.write_html('plots_src/model_performance.html')
 
 # Function to plot combined performance (train and test/validation)
 def plot_combined_performance(results_train, results_test):
@@ -167,7 +167,7 @@ def plot_combined_performance(results_train, results_test):
     # Plot model performance
     fig = px.bar(df, x='Model', y='Value', color='Target', barmode='group', facet_col='Dataset', title='Combined Model Performance')
     fig.update_layout(yaxis_type='log')
-    fig.write_html('plots_src/combined_performance.html')
+    #fig.write_html('plots_src/combined_performance.html')
 
 # Main Function
 if __name__ == "__main__":
@@ -195,10 +195,10 @@ if __name__ == "__main__":
             print(f"{model_name}: CV_RMSE_Mean={result['CV_RMSE_Mean']}, CV_RMSE_Std={result['CV_RMSE_Std']}, RMSE={result['RMSE']}")
     
     # Plot Model Performance
-    plot_model_performance(results_train)
+    #plot_model_performance(results_train)
     
     # Save Best Models and Scalers
-    save_best_model(results_train)
+    #save_best_model(results_train)
     
     # Evaluate on Test/Validation Set and Plot Combined Performance
     results_test = {}
@@ -235,4 +235,4 @@ if __name__ == "__main__":
         results_test[target] = target_test_results
     
     # Plot Combined Performance (Training vs Test/Validation)
-    plot_combined_performance(results_train, results_test)
+    #plot_combined_performance(results_train, results_test)

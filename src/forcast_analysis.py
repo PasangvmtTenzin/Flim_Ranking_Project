@@ -1,11 +1,8 @@
 from data_loader import load_csv
 import pandas as pd
+from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
-from sklearn.compose import ColumnTransformer
-from sklearn.pipeline import Pipeline
-from xgboost import XGBRegressor
 import joblib
-import numpy as np
 
 # Function to clean data
 def clean_data(data):
@@ -28,7 +25,7 @@ features = ['GDP', 'Population', 'CIS', 'GDP_Normalized_CIS', 'Population_Normal
 targets = ['OIS', 'strong_hegemony', 'weak_hegemony']
 
 # Function to make forecasts
-def make_forecasts(models_to_use, scalers, features, start_year, end_year, data):
+def make_forecasts(models_to_use, scalers, features, start_year, end_year, data, economic_growth_rate, targets):
     forecasts = []
     
     # Generate years to forecast
@@ -37,23 +34,45 @@ def make_forecasts(models_to_use, scalers, features, start_year, end_year, data)
     for year in years:
         forecast_row = {}
 
+        # Implement forecasting strategies for each feature
         for feature in features:
-            forecast_row[feature] = data[feature].mean()  # Replace with appropriate forecasting logic
+            if feature == 'GDP':
+                # Forecast GDP using economic growth rate
+                forecast_row['GDP'] = data['GDP'].iloc[-1] * (1 + economic_growth_rate / 100)
+            elif feature == 'Population':
+                # Example: Forecast Population using linear regression model (assuming it's already trained)
+                X_train = data[['Year']]
+                y_train = data['Population']
+                model = LinearRegression().fit(X_train, y_train)
+                forecast_row['Population'] = model.predict([[year]])[0]
+            elif feature in data.columns:
+                # Use historical average for features that exist in data
+                forecast_row[feature] = data[feature].mean()
+            else:
+                # Handle missing features gracefully
+                forecast_row[feature] = None
 
         # Create a dummy row DataFrame with forecast values
-        dummy_row = pd.DataFrame(forecast_row, index=[0])
+        dummy_row = pd.DataFrame([forecast_row], columns=features)
 
-        for target, model_dict in models_to_use.items():
-            for model_name, model_info in model_dict.items():
-                preprocessor = scalers[target]  # Get the preprocessor (ColumnTransformer)
-                model = model_info['Model']  # Get the model from the model_info
+        for target in targets:
+            if target in models_to_use:
+                # Load best model for the target
+                best_model = models_to_use[target]['Best_Model']['Pipeline']
                 
-                # Transform the dummy row using the preprocessor
-                scaled_row = preprocessor.transform(dummy_row[features])  # No need to convert to DataFrame
+                # Predict using the best model
+                X_forecast = dummy_row[features]  # Ensure features are in the correct order
+                X_forecast_scaled = scalers[target].transform(X_forecast)
                 
-                # Predict using the model
-                predicted_value = model.predict(scaled_row)
-                forecast_row[f'{model_name}_Prediction'] = predicted_value[0]  # Assuming single prediction output
+                # Convert X_forecast_scaled to DataFrame with column names
+                X_forecast_scaled_df = pd.DataFrame(X_forecast_scaled, columns=features)
+                
+                predicted_value = best_model.predict(X_forecast_scaled_df)
+                
+                forecast_row[f'{target}_Prediction'] = predicted_value[0]
+            else:
+                # If model for target not found, assign None to prediction columns
+                forecast_row[f'{target}_Prediction'] = None
         
         # Add year information
         forecast_row['Year'] = year
@@ -68,6 +87,10 @@ def make_forecasts(models_to_use, scalers, features, start_year, end_year, data)
 
 # Example usage
 if __name__ == "__main__":
+    # Define Features and Targets
+    features = ['GDP', 'Population', 'CIS', 'GDP_Normalized_CIS', 'Population_Normalized_CIS']
+    targets = ['OIS', 'strong_hegemony', 'weak_hegemony']
+    
     # Load data
     data = load_csv('../merged_data/final_data.csv')
     
@@ -75,7 +98,11 @@ if __name__ == "__main__":
     data = clean_data(data)
     
     # Ensure data has necessary columns for predictions
-    required_columns = ['Model', 'Best_OIS_Prediction', 'Best_strong_hegemony_Prediction', 'Best_weak_hegemony_Prediction']
+    required_columns = ['Model', 
+                        'OIS_Prediction', 
+                        'strong_hegemony_Prediction', 
+                        'weak_hegemony_Prediction']
+    
     for col in required_columns:
         if col not in data.columns:
             data[col] = None
@@ -84,12 +111,16 @@ if __name__ == "__main__":
     models_to_use = {}
     scalers = {}
     for target in targets:
-        model = joblib.load(f"src/{target}_model.pkl")
-        models_to_use[target] = {'Best_Model': {'Model': model}}
-        scalers[target] = joblib.load(f"src/{target}_scaler.pkl")
+        best_model = joblib.load(f"src/model/{target}_model.pkl")
+        scaler = joblib.load(f"src/scaler/{target}_scaler.pkl")
+        models_to_use[target] = {'Best_Model': {'Pipeline': best_model}}
+        scalers[target] = scaler
+    
+    # Economic growth rate for GDP forecasting
+    economic_growth_rate = 3.09  # Update this as needed
     
     # Make Forecasts from 2022 to 2040
-    forecast_data = make_forecasts(models_to_use, scalers, features, 2022, 2040, data)
+    forecast_data = make_forecasts(models_to_use, scalers, features, 2018, 2045, data, economic_growth_rate, targets)
     
     # Save Forecast Data
-    forecast_data.to_csv('src/forecast_data.csv', index=False)
+    #forecast_data.to_csv('src/forecast_data.csv', index=False)
